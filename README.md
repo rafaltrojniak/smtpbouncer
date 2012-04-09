@@ -1,15 +1,17 @@
 # About
 
-This script allows to deliver SMTP bonces to any HTTP service, 
+This script allows to deliver SMTP bounces to any HTTP service, 
 that implements simple REST interface.
-It uses disk queue dir, to flush bounces in another context.
+It uses disk queue dir, to flush bounces in separate context
+from the incoming mails.
+This allows to controll, delay delivery and load-balance while many bounces came in.
 
 ## Configuration
 
 Configuration files (one for each domain) should be placed
-in configs directory next to the scripts.
-Configuration files should be named as domains with '.json' extension
-(see example configuration for example.net).
+in *configs* directory next to the scripts.
+Configuration files should be named as domains with *'.json'* extension
+(see example configuration for example.net in this repo).
 
 Configuration files should be in JSON format.
 
@@ -20,15 +22,15 @@ Configuration files should be in JSON format.
 -	delivery.url - URL to destination site - see below
 -	delivery.method - HTTP  method of delivery (POST/GET)
 -	delivery.sendBody - Do you want to include source of the mail in the body ? (true/false)
--	delivery.bodyField - Form field that mail body should came in 
--	delivery.expectResponse - Expected response from the server
+-	delivery.bodyField - Form field name that mail body should came in 
+-	delivery.expectResponse - Expected response code from the server
 
 #### Destination url fields
 
-url can have few fields, that will be replaces bases on delivered mail :
+url can have few fields, that will be replaced based on delivered mail :
 
-- %%user%% - user (before +) part of mail destination
-- %%token%% - token (after +) part of mail destination
+- %%user%% - user part of mail destination (before +)
+- %%token%% - token part of mail destination (after +)
 - %%domain%% - domain of mail destination 
 - %%email%% - full email destination  
 - %%uniq%% - unique name of the bounce, generated as-they-come
@@ -41,7 +43,7 @@ Script has two parts : processor and delivery script
 
 This script process bounce as-they-come from the SMTP client.
 It should be configured as local forward program.
-You can do that using .forward file by putting there :
+You can do that using *.forward* file by putting there :
 <pre><code>|/path/to/script/process_message</code></pre>
 
 ### deliver\_message
