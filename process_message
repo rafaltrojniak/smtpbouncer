@@ -30,7 +30,8 @@ $queue->setConfig($config->queue);
 
 //Writing to queue
 $in=fopen('php://stdin',"r");
-$out=$queue->getFileHandle($to.'#'.uniqid());
+$id=$to.'#'.uniqid();
+$out=$queue->getFileHandle($id);
 $bufsize=40960;
 
 while(!feof($in)){
@@ -40,4 +41,4 @@ while(!feof($in)){
 	fwrite($out,$buf);
 }
 fclose($out);
-syslog(LOG_INFO,"Delivered to queue $tmpFile");
+syslog(LOG_INFO,"Delivered to queue as $id");

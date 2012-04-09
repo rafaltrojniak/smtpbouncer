@@ -16,10 +16,17 @@ class FileHash implements StorageInterface {
 		$hash=substr(sha1($token),0,$this->hashLength);
 		$dirName=$this->parentDir.'/'.$hash;
 		if(!is_dir($dirName)){
-			mkdir($dirName);
+			if(!mkdir($dirName)){
+				syslog(LOG_CRIT,"Cannot create new directory $dirName");
+				exit();
+			}
 		}
 		$fileName=$dirName."/".$token;
 		$fileHandle=fopen($fileName,'w');
+		if($fileHandle===false){
+			syslog(LOG_CRIT,"Cannot open new file $fileName");
+			exit();
+		}
 		flock($out);
 		return $fileHandle;
 
