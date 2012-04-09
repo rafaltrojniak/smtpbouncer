@@ -42,7 +42,7 @@ Script has two parts : processor and delivery script
 This script process bounce as-they-come from the SMTP client.
 It should be configured as local forward program.
 You can do that using .forward file by putting there :
-<pre><code>|/path/to/script/process\_message</code></pre>
+<pre><code>|/path/to/script/process_message</code></pre>
 
 ### deliver\_message
 
