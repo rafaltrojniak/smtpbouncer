@@ -1,0 +1,89 @@
+#!/usr/bin/env php
+<?php
+if(!openlog('deliver_message',LOG_PID,LOG_MAIL))
+	throw new Exception('Cannot openlog');
+
+if(count($argv)<2){
+	throw new Exception('Supply cnfiguration file to use in argument');
+}
+
+// Setting up config
+$configFile=$argv[1];
+if(is_readable($configFile)){
+	$config=json_decode(file_get_contents($configFile));
+	if(is_null($config)){
+		throw new Exception("Failed to parse config from file $configFile");
+	}
+}else{
+	throw new Exception("No config for domain $domain");
+}
+$delivery=$config->delivery;
+
+// Setting up queue
+require_once(dirname(__FILE__)."/inc/FileHash.php");
+$queue=new FileHash ();
+$queue->setConfig($config->queue);
+
+$ch=curl_init();
+
+// Main process loop
+foreach($queue as $filePath){
+	// Openning and locking file
+	$file=fopen($filePath,'r');
+	if($file==false)
+		continue;
+	if(flock($file,LOCK_EX | LOCK_NB)){
+		$fileName=basename($filePath);
+
+		//Extract tokens
+		$match=preg_match_all(
+			"/^(?P<email>(?P<user>[^+]*)\\+(?P<token>[^@]*)@(?P<domain>[^#]*))#(?P<uniq>.*)\$/",
+			$fileName,
+			$data);
+		if($match===false or $match!=1){
+			syslog(LOG_ERR,"Failed to parse $fileName, got ".($match===false)?"false":print_r($match,true)." matches");
+			fclose($file);
+			continue;
+		}
+		// Fill url with fields
+		$fields=array('%%user%%','%%token%%','%%domain%%','%%email%%','%%uniq%%');
+		$values=array($data['user'][0],$data['token'][0],$data['domain'][0],$data['email'][0],$data['uniq'][0]);
+		$url=str_replace($fields,$values, $delivery->url);
+
+		// Set options
+		$options=array(
+			CURLOPT_URL => $url,
+			CURLOPT_FORBID_REUSE => false,
+		);
+		// set method
+		if($delivery->method=='POST'){
+			$options[CURLOPT_POST]=true;
+		}elseif($delivery->method!='GET'){
+			throw new Exception('Cannot set HTTP method to '.$delivery->method);
+		}
+
+		// Attach body
+		if($delivery->sendBody){
+			$options[CURLOPT_POSTFIELDS]=
+				array($delivery->bodyField=>file_get_contents($filePath));
+		}
+		if(!curl_setopt_array($ch,$options)){
+			throw new Exception('Failed to set options for curl : '.print_r($options,true));
+		}
+
+		if(curl_exec($ch)){
+			$info=curl_getinfo($ch);
+			if($info['http_code']==$delivery->expectResponse) {
+				syslog(LOG_INFO,"Delivered file $fileName");
+				if(!unlink($filePath)){
+					throw new Exception("Cannot unlink file $filePath");
+				}
+			}else{
+				syslog(LOG_ERROR,"Failed to deliver, got response code ".$info['http_code']." from server");
+			}
+		}else{
+			syslog(LOG_ERROR,"Failed to execute query");
+		}
+	}
+	fclose($file);
+}

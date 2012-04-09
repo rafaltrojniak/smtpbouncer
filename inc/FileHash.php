@@ -1,6 +1,7 @@
 <?php
 require_once(dirname(__FILE__).'/StorageInterface.php');
-class FileHash implements StorageInterface {
+require_once(dirname(__FILE__).'/FileHashIterator.php');
+class FileHash implements StorageInterface, IteratorAggregate {
 	private $parentDir;
 	private $hashLength=2;
 	function setConfig($config){
@@ -30,5 +31,11 @@ class FileHash implements StorageInterface {
 		flock($out);
 		return $fileHandle;
 
+	}
+
+	public function getIterator ( )
+	{
+		$iterator=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($this->parentDir));
+		return new FileHashIterator($iterator);
 	}
 }

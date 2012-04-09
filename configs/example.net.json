@@ -3,5 +3,12 @@
 	"queue":{
 		"parentDir":"/home/bouncer/queue",
 		"hashLength":2
+	},
+	"delivery":{
+		"url":"http://bounces.devel/dump.php?key=sysemKey&token=%%token%%",
+		"method":"POST",
+		"sendBody":true,
+		"bodyField":"mail_content",
+		"expectResponse":200
 	}
 }

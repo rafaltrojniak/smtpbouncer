@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 if(!openlog('process_message',LOG_PID,LOG_MAIL))
-	throw Exception('Cannot openlog');
+	throw new Exception('Cannot openlog');
 
 $to=getenv("ORIGINAL_RECIPIENT");
 if(empty($to)){
