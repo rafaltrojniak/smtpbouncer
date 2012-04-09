@@ -1,0 +1,43 @@
+#!/usr/bin/env php
+<?php
+if(!openlog('process_message',LOG_PID,LOG_MAIL))
+	throw Exception('Cannot openlog');
+
+$to=getenv("ORIGINAL_RECIPIENT");
+if(empty($to)){
+	syslog(LOG_CRIT,"No ORIGINAL_RECIPIENT environment - exiting");
+	exit(0);
+}
+$domain=substr($to,strpos($to,'@')+1);
+
+// Setting up config
+$configDir=dirname(__FILE__).'/configs';
+$configFile="$configDir/$domain.json";
+if(is_readable($configFile)){
+	$config=json_decode(file_get_contents($configFile));
+	if(is_null($config)){
+		syslog(LOG_INFO,"Failed to parse config from file $configFile");
+	}
+}else{
+	syslog(LOG_INFO,"No config for domain $domain");
+	exit(0);
+}
+
+// Setting up queue
+require_once(dirname(__FILE__)."/inc/FileHash.php");
+$queue=new FileHash ();
+$queue->setConfig($config->queue);
+
+//Writing to queue
+$in=fopen('php://stdin',"r");
+$out=$queue->getFileHandle($to.'#'.uniqid());
+$bufsize=40960;
+
+while(!feof($in)){
+	$buf=fread($in,$bufsize);
+	if($buf===false)
+		break;
+	fwrite($out,$buf);
+}
+fclose($out);
+syslog(LOG_INFO,"Delivered to queue $tmpFile");
